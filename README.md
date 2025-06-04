@@ -88,10 +88,47 @@ KV Cache Speedup: 2.04x
 
 ### 🎯 Immediate Next Steps
 
-1. **Custom KV Cache Implementation**
-   - Implement our own KV cache from scratch (building on `kv_cache.py`)
-   - Add memory management and cache eviction strategies
-   - Compare performance with built-in transformer caching
+1. **Custom KV Cache Integration with HF Models**
+   
+   **Current State:** Using HF's built-in KV cache (`use_cache=True/False`)
+   
+   **Goal:** Replace HF's caching with our custom `kv_cache.py` implementation
+   
+   **Approach:** Hook into HF's forward pass (Option 1 - most educational)
+   
+   **Detailed Plan:**
+   
+   a) **Analyze HF Model Structure**
+      - Examine GPT-2's attention layer implementation
+      - Understand how `past_key_values` flows through the model
+      - Map out tensor shapes and dimensions at each step
+   
+   b) **Create Custom Attention Class**
+      - Implement our own attention mechanism using `kv_cache.py`
+      - Handle key/value computation and storage
+      - Manage attention mask sizing correctly
+      - Fix tensor dimension mismatches from previous attempt
+   
+   c) **Model Integration Strategy**
+      - Monkey-patch HF's attention layers with our custom implementation
+      - OR subclass the model and replace attention components
+      - Ensure compatibility with existing model weights
+   
+   d) **Debug & Validation**
+      - Fix tensor shape alignment issues
+      - Validate output matches HF's implementation
+      - Test with different sequence lengths and batch sizes
+   
+   e) **Performance Comparison**
+      - Benchmark: Our custom cache vs HF built-in cache vs no cache
+      - Measure memory usage differences
+      - Document performance characteristics
+   
+   **Learning Outcomes:**
+   - Deep understanding of transformer attention mechanics
+   - Experience integrating custom optimizations with existing models
+   - Tensor manipulation and memory management skills
+   - Foundation for more advanced optimizations (paged attention, etc.)
 
 2. **Continuous Batching**
    - Implement dynamic batch processing
