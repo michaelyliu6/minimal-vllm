@@ -65,11 +65,34 @@ class KVCache:
         
         cache_key, cache_value = self.cache[layer_idx]
         
-        # Update the cache at the specified position
-        cache_key[:, :, start_pos:start_pos + key.size(2)] = key
-        cache_value[:, :, start_pos:start_pos + value.size(2)] = value
+        # Ensure key and value have the right shape (4D)
+        if key.dim() == 3:
+            # Add batch dimension if missing
+            key = key.unsqueeze(0)
+        if value.dim() == 3:
+            # Add batch dimension if missing
+            value = value.unsqueeze(0)
         
-        self.current_seq_len = max(self.current_seq_len, start_pos + key.size(2))
+        # Get the number of new tokens
+        new_tokens = key.size(2)
+        
+        # Check bounds
+        if start_pos + new_tokens > cache_key.size(2):
+            # If we exceed the cache size, we need to expand or handle it
+            print(f"Warning: Cache overflow for layer {layer_idx}. start_pos: {start_pos}, new_tokens: {new_tokens}, cache_size: {cache_key.size(2)}")
+            # For now, just update what we can
+            new_tokens = cache_key.size(2) - start_pos
+            if new_tokens <= 0:
+                return
+            key = key[:, :, :new_tokens, :]
+            value = value[:, :, :new_tokens, :]
+        
+        # Update the cache at the specified position
+        cache_key[:, :, start_pos:start_pos + new_tokens] = key[:, :, :new_tokens, :]
+        cache_value[:, :, start_pos:start_pos + new_tokens] = value[:, :, :new_tokens, :]
+        
+        # Only update sequence length once per generation step, not per layer
+        # We'll handle this externally to avoid multiple updates
     
     def get(self, layer_idx: int, start_pos: int, end_pos: Optional[int] = None) -> Tuple[torch.Tensor, torch.Tensor]:
         """
@@ -99,4 +122,8 @@ class KVCache:
     def clear(self) -> None:
         """Clear the entire cache."""
         self.cache.clear()
-        self.current_seq_len = 0 
+        self.current_seq_len = 0
+    
+    def update_seq_len(self, new_tokens: int) -> None:
+        """Update the current sequence length by the number of new tokens."""
+        self.current_seq_len += new_tokens 
